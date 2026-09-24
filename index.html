@@ -1685,44 +1685,66 @@
       );
     };
 
-    async function populateCitySelect() {
-      try {
-        const result = await fetchCities(false);
-        const cities = result.data || [];
-        let opts = '<option value="">اختر المنطقة</option>';
-        cities.forEach(c => { opts += `<option value="${c.name}">${c.name}</option>`; });
-        document.getElementById('cust-area').innerHTML = opts;
-      } catch (e) { toast('فشل تحميل المدن', 'error'); }
-    }
+async function populateCitySelect(selectedValue = '') {
+  try {
+    const result = await fetchCities(false);
+    const cities = result.data || [];
+    const select = document.getElementById('cust-area');
 
-    window.openAddCustomer = async () => {
-      document.getElementById('cust-form').reset();
-      document.getElementById('cust-id').value = '';
-      document.getElementById('cust-modal-title').textContent = 'إضافة عميل جديد';
-      if (currentUser) document.getElementById('cust-responsible').value = currentUser.name;
-      await populateCitySelect();
-      showModal('cust-modal');
-    };
-    window.editCustomer = async (id) => {
-      try {
-        const result = await fetchCustomers(true);
-        const customer = result.data.find(c => c.id === id);
-        if (!customer) { toast('العميل غير موجود', 'error'); return; }
-        document.getElementById('cust-id').value = id;
-        document.getElementById('cust-name').value = customer.name || '';
-        document.getElementById('cust-responsible').value = customer.responsible || '';
-        document.getElementById('cust-phone').value = customer.phone || '';
-        document.getElementById('cust-area').value = customer.area || '';
-        document.getElementById('cust-address').value = customer.address || '';
-        document.getElementById('cust-location').value = customer.location || '';
-        document.getElementById('cust-category').value = customer.category || '';
-        document.getElementById('cust-creditlimit').value = customer.creditLimit || 0;
-        document.getElementById('cust-notes').value = customer.notes || '';
-        document.getElementById('cust-modal-title').textContent = 'تعديل بيانات العميل';
-        await populateCitySelect();
-        showModal('cust-modal');
-      } catch (e) { toast('فشل تحميل بيانات العميل', 'error'); }
-    };
+    // نبني الـ options من الأول
+    let opts = '<option value="">اختر المنطقة</option>';
+    cities.forEach(c => { opts += `<option value="${c.name}">${c.name}</option>`; });
+    select.innerHTML = opts;
+
+    // ✅ لو فيه قيمة محددة، نطبقها بعد بناء الـ options
+    if (selectedValue) {
+      select.value = selectedValue;
+
+      // 🛡️ احتياطي: لو المنطقة القديمة اتحذفت من الإعدادات، نضيفها مؤقتاً
+      // عشان الفورم ميفتحش على "اختر المنطقة" ونخسر بيانات العميل
+      if (select.value !== selectedValue) {
+        const fallback = document.createElement('option');
+        fallback.value = selectedValue;
+        fallback.textContent = selectedValue + ' (غير مسجّلة حالياً)';
+        select.appendChild(fallback);
+        select.value = selectedValue;
+      }
+    }
+  } catch (e) { toast('فشل تحميل المدن', 'error'); }
+}
+
+window.openAddCustomer = async () => {
+  document.getElementById('cust-form').reset();
+  document.getElementById('cust-id').value = '';
+  document.getElementById('cust-modal-title').textContent = 'إضافة عميل جديد';
+  if (currentUser) document.getElementById('cust-responsible').value = currentUser.name;
+  await populateCitySelect('');   // مفيش قيمة محددة (وضع إضافة جديد)
+  showModal('cust-modal');
+};
+window.editCustomer = async (id) => {
+  try {
+    const result = await fetchCustomers(true);
+    const customer = result.data.find(c => c.id === id);
+    if (!customer) { toast('العميل غير موجود', 'error'); return; }
+
+    // ✅ (1) الأول: نبني قائمة المناطق ونمرر القيمة عشان تتحدد صح
+    await populateCitySelect(customer.area || '');
+
+    // ✅ (2) بعده: نحدد باقي الحقول
+    document.getElementById('cust-id').value          = id;
+    document.getElementById('cust-name').value        = customer.name || '';
+    document.getElementById('cust-responsible').value = customer.responsible || '';
+    document.getElementById('cust-phone').value       = customer.phone || '';
+    document.getElementById('cust-address').value     = customer.address || '';
+    document.getElementById('cust-location').value    = customer.location || '';
+    document.getElementById('cust-category').value    = customer.category || '';
+    document.getElementById('cust-creditlimit').value = customer.creditLimit || 0;
+    document.getElementById('cust-notes').value       = customer.notes || '';
+
+    document.getElementById('cust-modal-title').textContent = 'تعديل بيانات العميل';
+    showModal('cust-modal');
+  } catch (e) { toast('فشل تحميل بيانات العميل', 'error'); }
+};
     window.saveCustomer = async () => {
       const id = document.getElementById('cust-id').value;
       const name = document.getElementById('cust-name').value.trim();
