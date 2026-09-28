@@ -104,6 +104,8 @@
     .data-table tr.cancelled-row td { opacity: .55; text-decoration: line-through; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
     .modal-overlay.active { display: flex; }
+    /* ✅ مودال التأكيد دايمًا فوق كل المودالات التانية */
+    #confirm-modal { z-index: 10001 !important; }
     .modal { background: var(--card); border-radius: 16px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); color: var(--text); }
     .modal-lg { max-width: 780px; }
     .modal-xl { max-width: 960px; }
@@ -964,6 +966,15 @@
     function showModal(id) { $(id).classList.add('active'); }
     function hideModal(id) { $(id).classList.remove('active'); }
     function payTypeLabel(t) { return { cash: 'نقدي', credit: 'آجل', partial: 'جزئي' }[t] || t; }
+
+    // ✅ تنسيق السجل الضريبي: 766406091 → 091 406 766
+    function formatTaxId(taxId) {
+      const str = String(taxId || '').replace(/\s/g, '');
+      if (str.length === 9) {
+        return str.slice(6, 9) + ' ' + str.slice(3, 6) + ' ' + str.slice(0, 3);
+      }
+      return taxId || '766406091';
+    }
 
     function saveFilter(key, value) {
       try {
@@ -2241,7 +2252,35 @@
     // ========================================================================
     function generateInvoiceHTML(inv) {
       let itemsHtml = (inv.items || []).map(it => `<tr><td>${it.productName}</td><td>${it.weight} كجم</td><td>${fmt(it.price)}</td><td>${fmt(it.weight * it.price)}</td></tr>`).join('');
-      return `<div class="invoice-print-container"><div class="header"><h2>وطنية فودز للصناعات الغذائية</h2><p>📞 ${inv.companyPhone || '01151127150'} | 🏷️ السجل الضريبي: ${inv.companyTaxId || '766406091'}</p><p>رقم الفاتورة: ${inv.number}</p><p>التاريخ: ${safeDate(inv.date)}</p><p>العميل: ${inv.customerName}</p><p>نوع الدفع: ${payTypeLabel(inv.payType)}</p>${inv.status === 'cancelled' ? '<p style="color:red;">⚠️ فاتورة ملغاة</p>' : ''}</div><table><thead><tr><th>الصنف</th><th>الوزن</th><th>السعر/كجم</th><th>الإجمالي</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="totals"><div>المجموع: ${fmt(inv.subtotal)} ج.م</div><div>الخصم: ${fmt(inv.discount)} ج.م</div><div class="total-row">الإجمالي: ${fmt(inv.total)} ج.م</div><div>المدفوع: ${fmt(inv.paidAmount)} ج.م</div><div style="color:red;">المتبقي: ${fmt(inv.remaining)} ج.م</div></div>${inv.notes ? `<p>ملاحظات: ${inv.notes}</p>` : ''}<div style="text-align:center;margin-top:20px;font-size:10px;">شكراً لتعاملكم مع وطنية فودز</div></div>`;
+      return `<div class="invoice-print-container">
+    <div class="header">
+      <h2>وطنية فودز للصناعات الغذائية</h2>
+      <p>السجل الضريبي: ${formatTaxId(inv.companyTaxId)}</p>
+      <p>رقم الفاتورة: ${inv.number}</p>
+      <p>التاريخ: ${safeDate(inv.date)}</p>
+      <p>العميل: ${inv.customerName}</p>
+      <p>نوع الدفع: ${payTypeLabel(inv.payType)}</p>
+      ${inv.status === 'cancelled' ? '<p style="color:red;">⚠️ فاتورة ملغاة</p>' : ''}
+    </div>
+    <table>
+      <thead>
+        <tr><th>الصنف</th><th>الوزن</th><th>السعر/كجم</th><th>الإجمالي</th></tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    <div class="totals">
+      <div>المجموع: ${fmt(inv.subtotal)} ج.م</div>
+      <div>الخصم: ${fmt(inv.discount)} ج.م</div>
+      <div class="total-row">الإجمالي: ${fmt(inv.total)} ج.م</div>
+      <div>المدفوع: ${fmt(inv.paidAmount)} ج.م</div>
+      <div style="color:red;">المتبقي: ${fmt(inv.remaining)} ج.م</div>
+    </div>
+    ${inv.notes ? `<p>ملاحظات: ${inv.notes}</p>` : ''}
+    <div style="text-align:center;margin-top:20px;font-size:10px;">
+      <div>شكراً لتعاملكم مع وطنية فودز</div>
+      <div>📞 ${inv.companyPhone || '01151127150'}</div>
+    </div>
+  </div>`;
     }
     window.openPrintInvoice = async (id) => {
       try {
