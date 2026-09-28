@@ -551,6 +551,41 @@
     </div>
   </div>
 
+  <!-- 🎉 مودال رسالة الترحيب بالواتساب -->
+  <div class="modal-overlay" id="welcome-wa-modal">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h3><i class="fa-brands fa-whatsapp" style="color:#25D366;"></i> رسالة ترحيب للعميل الجديد</h3>
+        <button class="modal-close" onclick="hideModal('welcome-wa-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-14" style="font-size:13px;">
+          ✅ تم تسجيل العميل بنجاح. اضغط "إرسال على واتساب" لإرسال رسالة ترحيبية تلقائية مع موقع العميل.
+        </p>
+
+        <div class="form-group">
+          <label>رقم الهاتف</label>
+          <input type="text" id="welcome-wa-phone" disabled style="background:#f0f0f0;font-weight:bold;">
+        </div>
+
+        <div class="form-group">
+          <label>معاينة الرسالة</label>
+          <textarea id="welcome-wa-preview" rows="11" readonly
+            style="width:100%;padding:12px;border-radius:8px;border:1.5px solid var(--border);
+                   background:var(--bg);font-family:inherit;font-size:13px;line-height:1.8;resize:none;color:var(--text);">
+          </textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="welcome-wa-send-btn" href="#" target="_blank" class="btn btn-primary"
+           style="background:#25D366;color:white;border:none;">
+          <i class="fa-brands fa-whatsapp"></i> إرسال على واتساب
+        </a>
+        <button class="btn btn-ghost" onclick="hideModal('welcome-wa-modal')">تخطي</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="city-modal">
     <div class="modal">
       <div class="modal-header"><h3 id="city-modal-title">إدارة المدينة</h3><button class="modal-close" onclick="hideModal('city-modal')">×</button></div>
@@ -1685,66 +1720,69 @@
       );
     };
 
-async function populateCitySelect(selectedValue = '') {
-  try {
-    const result = await fetchCities(false);
-    const cities = result.data || [];
-    const select = document.getElementById('cust-area');
+    async function populateCitySelect(selectedValue = '') {
+      try {
+        const result = await fetchCities(false);
+        const cities = result.data || [];
+        const select = document.getElementById('cust-area');
 
-    // نبني الـ options من الأول
-    let opts = '<option value="">اختر المنطقة</option>';
-    cities.forEach(c => { opts += `<option value="${c.name}">${c.name}</option>`; });
-    select.innerHTML = opts;
+        // نبني الـ options من الأول
+        let opts = '<option value="">اختر المنطقة</option>';
+        cities.forEach(c => { opts += `<option value="${c.name}">${c.name}</option>`; });
+        select.innerHTML = opts;
 
-    // ✅ لو فيه قيمة محددة، نطبقها بعد بناء الـ options
-    if (selectedValue) {
-      select.value = selectedValue;
+        // ✅ لو فيه قيمة محددة، نطبقها بعد بناء الـ options
+        if (selectedValue) {
+          select.value = selectedValue;
 
-      // 🛡️ احتياطي: لو المنطقة القديمة اتحذفت من الإعدادات، نضيفها مؤقتاً
-      // عشان الفورم ميفتحش على "اختر المنطقة" ونخسر بيانات العميل
-      if (select.value !== selectedValue) {
-        const fallback = document.createElement('option');
-        fallback.value = selectedValue;
-        fallback.textContent = selectedValue + ' (غير مسجّلة حالياً)';
-        select.appendChild(fallback);
-        select.value = selectedValue;
-      }
+          // 🛡️ احتياطي: لو المنطقة القديمة اتحذفت من الإعدادات، نضيفها مؤقتاً
+          if (select.value !== selectedValue) {
+            const fallback = document.createElement('option');
+            fallback.value = selectedValue;
+            fallback.textContent = selectedValue + ' (غير مسجّلة حالياً)';
+            select.appendChild(fallback);
+            select.value = selectedValue;
+          }
+        }
+      } catch (e) { toast('فشل تحميل المدن', 'error'); }
     }
-  } catch (e) { toast('فشل تحميل المدن', 'error'); }
-}
 
-window.openAddCustomer = async () => {
-  document.getElementById('cust-form').reset();
-  document.getElementById('cust-id').value = '';
-  document.getElementById('cust-modal-title').textContent = 'إضافة عميل جديد';
-  if (currentUser) document.getElementById('cust-responsible').value = currentUser.name;
-  await populateCitySelect('');   // مفيش قيمة محددة (وضع إضافة جديد)
-  showModal('cust-modal');
-};
-window.editCustomer = async (id) => {
-  try {
-    const result = await fetchCustomers(true);
-    const customer = result.data.find(c => c.id === id);
-    if (!customer) { toast('العميل غير موجود', 'error'); return; }
+    window.openAddCustomer = async () => {
+      document.getElementById('cust-form').reset();
+      document.getElementById('cust-id').value = '';
+      document.getElementById('cust-modal-title').textContent = 'إضافة عميل جديد';
+      if (currentUser) document.getElementById('cust-responsible').value = currentUser.name;
+      await populateCitySelect('');
+      showModal('cust-modal');
+    };
+    window.editCustomer = async (id) => {
+      try {
+        const result = await fetchCustomers(true);
+        const customer = result.data.find(c => c.id === id);
+        if (!customer) { toast('العميل غير موجود', 'error'); return; }
 
-    // ✅ (1) الأول: نبني قائمة المناطق ونمرر القيمة عشان تتحدد صح
-    await populateCitySelect(customer.area || '');
+        // ✅ (1) الأول: نبني قائمة المناطق ونمرر القيمة عشان تتحدد صح
+        await populateCitySelect(customer.area || '');
 
-    // ✅ (2) بعده: نحدد باقي الحقول
-    document.getElementById('cust-id').value          = id;
-    document.getElementById('cust-name').value        = customer.name || '';
-    document.getElementById('cust-responsible').value = customer.responsible || '';
-    document.getElementById('cust-phone').value       = customer.phone || '';
-    document.getElementById('cust-address').value     = customer.address || '';
-    document.getElementById('cust-location').value    = customer.location || '';
-    document.getElementById('cust-category').value    = customer.category || '';
-    document.getElementById('cust-creditlimit').value = customer.creditLimit || 0;
-    document.getElementById('cust-notes').value       = customer.notes || '';
+        // ✅ (2) بعده: نحدد باقي الحقول
+        document.getElementById('cust-id').value          = id;
+        document.getElementById('cust-name').value        = customer.name || '';
+        document.getElementById('cust-responsible').value = customer.responsible || '';
+        document.getElementById('cust-phone').value       = customer.phone || '';
+        document.getElementById('cust-address').value     = customer.address || '';
+        document.getElementById('cust-location').value    = customer.location || '';
+        document.getElementById('cust-category').value    = customer.category || '';
+        document.getElementById('cust-creditlimit').value = customer.creditLimit || 0;
+        document.getElementById('cust-notes').value       = customer.notes || '';
 
-    document.getElementById('cust-modal-title').textContent = 'تعديل بيانات العميل';
-    showModal('cust-modal');
-  } catch (e) { toast('فشل تحميل بيانات العميل', 'error'); }
-};
+        document.getElementById('cust-modal-title').textContent = 'تعديل بيانات العميل';
+        showModal('cust-modal');
+      } catch (e) { toast('فشل تحميل بيانات العميل', 'error'); }
+    };
+
+    // ========================================================================
+    // 💾 حفظ العميل + رسالة ترحيب واتساب
+    // ========================================================================
     window.saveCustomer = async () => {
       const id = document.getElementById('cust-id').value;
       const name = document.getElementById('cust-name').value.trim();
@@ -1756,19 +1794,102 @@ window.editCustomer = async (id) => {
       const category = document.getElementById('cust-category').value;
       const creditLimit = parseFloat(document.getElementById('cust-creditlimit').value) || 0;
       const notes = document.getElementById('cust-notes').value.trim();
+
       if (!name) { toast('أدخل اسم العميل', 'error'); return; }
       if (!responsible) { toast('أدخل اسم المسؤول عن المشتريات', 'error'); return; }
       if (!area) { toast('اختر المنطقة', 'error'); return; }
+
       await withBtnLoading('cust-save-btn', async () => {
         try {
-          if (id) { await callApi('updateCustomer', { id, name, responsible, phone, area, address, location, category, creditLimit, notes }); toast('تم تحديث بيانات العميل'); }
-          else { await callApi('addCustomer', { name, responsible, phone, area, address, location, category, creditLimit, notes }); toast('تم إضافة العميل'); }
+          const isNewCustomer = !id;
+
+          if (isNewCustomer) {
+            await callApi('addCustomer', { name, responsible, phone, area, address, location, category, creditLimit, notes });
+            toast('✅ تم إضافة العميل');
+          } else {
+            await callApi('updateCustomer', { id, name, responsible, phone, area, address, location, category, creditLimit, notes });
+            toast('تم تحديث بيانات العميل');
+          }
+
           invalidateCustomersCache();
           hideModal('cust-modal');
           await loadCustomers();
-        } catch (e) { toast(e.message || 'حدث خطأ أثناء الحفظ', 'error'); }
+
+          // 🎉 لو عميل جديد + عنده رقم هاتف → افتح مودال رسالة الترحيب
+          if (isNewCustomer && phone) {
+            setTimeout(() => openWelcomeWhatsApp({ name, responsible, phone, area, address, location }), 350);
+          } else if (isNewCustomer && !phone) {
+            toast('ℹ️ تم التسجيل بدون رقم هاتف — أضف رقماً لإرسال رسالة ترحيب', 'info', 4000);
+          }
+        } catch (e) {
+          toast(e.message || 'حدث خطأ أثناء الحفظ', 'error');
+        }
       });
     };
+
+    // ========================================================================
+    // 🎉 رسالة واتساب ترحيبية للعميل الجديد
+    // ========================================================================
+    window.openWelcomeWhatsApp = function(customer) {
+      const COUNTRY_CODE = '20';
+
+      // 1) تنظيف الرقم وضبط كود الدولة
+      let cleanPhone = (customer.phone || '').replace(/[^0-9]/g, '');
+      if (cleanPhone) {
+        if (cleanPhone.startsWith('0')) {
+          cleanPhone = COUNTRY_CODE + cleanPhone.substring(1);
+        } else if (cleanPhone.length === 10 && cleanPhone.startsWith('1')) {
+          cleanPhone = COUNTRY_CODE + cleanPhone;
+        } else if (!cleanPhone.startsWith(COUNTRY_CODE) &&
+                   (cleanPhone.length === 10 || cleanPhone.length === 11)) {
+          cleanPhone = COUNTRY_CODE + cleanPhone;
+        }
+      }
+
+      if (!cleanPhone) {
+        toast('⚠️ رقم الهاتف غير صالح', 'warning');
+        return;
+      }
+
+      // 2) تجهيز رابط الموقع
+      let locationLine = '';
+      if (customer.location) {
+        const coords = customer.location.split(',').map(s => s.trim());
+        if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+          const mapUrl = `https://www.google.com/maps?q=${coords[0]},${coords[1]}`;
+          locationLine = `\n🗺️ موقعكم المسجل: ${mapUrl}`;
+        } else {
+          locationLine = `\n🗺️ الموقع: ${customer.location}`;
+        }
+      }
+
+      // 3) بناء نص الرسالة
+      const responsible = (customer.responsible || '').trim() || 'عميلنا العزيز';
+      const message = `السلام عليكم أ. ${responsible} 🌿
+مرحباً بكم في وطنية فودز للصناعات الغذائية 🫒
+
+يسعدنا إبلاغكم أنه تم تسجيل بياناتكم بنجاح ✅
+
+📋 البيانات المسجلة:
+• الاسم: ${customer.name}
+• المنطقة: ${customer.area || '-'}${customer.address ? `\n• العنوان: ${customer.address}` : ''}${locationLine}
+
+سيتم التواصل معكم قريباً عند خروج عربية التوزيع لمنطقتكم.
+
+شكراً لثقتكم بنا 🌹
+🫒 وطنية فودز للصناعات الغذائية
+📞 01151127150`;
+
+      // 4) تحديث المودال
+      document.getElementById('welcome-wa-phone').value = '+' + cleanPhone;
+      document.getElementById('welcome-wa-preview').value = message;
+      document.getElementById('welcome-wa-send-btn').href =
+        `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+
+      // 5) عرض المودال
+      showModal('welcome-wa-modal');
+    };
+
     window.applyCustomerFilters = async function() {
       const search = $('cust-search').value.trim();
       const area = $('cust-filter-area').value;
@@ -2546,7 +2667,6 @@ window.editCustomer = async (id) => {
           const trendIcon = p.trend === 'up' ? '🔺' : p.trend === 'down' ? '🔻' : '➡️';
           const trendText = p.trend === 'up' ? 'صاعد' : p.trend === 'down' ? 'هابط' : 'ثابت';
 
-          // 🎯 input قابل للتعديل
           const neededCell = p.needed > 0
             ? `<input type="number"
                      class="predict-needed-input"
@@ -2629,7 +2749,6 @@ window.editCustomer = async (id) => {
       }
     };
 
-    // 🎯 دالة التقريب الجماعي لأقرب 5
     window.roundAllToNext5 = function() {
       const inputs = document.querySelectorAll('.predict-needed-input');
       let count = 0;
@@ -2643,7 +2762,6 @@ window.editCustomer = async (id) => {
       toast(`✅ تم تقريب ${count} صنف لأقرب 5 كجم`, 'success', 2000);
     };
 
-    // 🎯 دالة التقريب الجماعي لأقرب 10
     window.roundAllToNext10 = function() {
       const inputs = document.querySelectorAll('.predict-needed-input');
       let count = 0;
@@ -2657,7 +2775,6 @@ window.editCustomer = async (id) => {
       toast(`✅ تم تقريب ${count} صنف لأقرب 10 كجم`, 'success', 2000);
     };
 
-    // 🎯 تطبيق الاقتراح — بيقرأ القيم من الـ inputs
     window.applyPrediction = async function() {
       const inputs = document.querySelectorAll('.predict-needed-input');
       if (inputs.length === 0) {
