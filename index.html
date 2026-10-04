@@ -549,7 +549,7 @@
     // ========================================================================
     // ⚙️ الإعدادات الأساسية
     // ========================================================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxWQQ_3UIIel819_bYjgkHO52C2l-J7SVyBBG-knZI01qZCpgYvhxcUTcVV64zJ7zly/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzww_sGs8UbwAiG4gNxI1QElNkw24aVet1WOI241FLNIa5izNu-UUA4ymI_Y3-x3v-p/exec';
     const CACHE_DURATION = 6 * 60 * 60 * 1000;
     const LISTS_CACHE_TTL = 2 * 60 * 1000;
 
@@ -1339,12 +1339,48 @@
       await populateCitySelect('');
       showModal('cust-modal');
     };
+    // ✅ متغير عام لتتبع آخر عملية تعديل (يمنع اللخبطة عند الضغط السريع)
+    let editingCustomerId = null;
+
     window.editCustomer = async (id) => {
+      const editToken = Date.now();
+      editingCustomerId = editToken;
+      
       try {
-        const result = await fetchCustomers(true);
-        const customer = result.data.find(c => c.id === id);
-        if (!customer) { toast('العميل غير موجود', 'error'); return; }
+        // ✅ 1) اعتمد على الكاش أولاً (نفس البيانات المعروضة للمستخدم)
+        let customers = (cachedCustomers && cachedCustomers.data) || [];
+        let customer = customers.find(c => String(c.id) === String(id));
+        
+        // ✅ 2) لو مش موجود في الكاش، اجلب من السيرفر
+        if (!customer) {
+          const result = await fetchCustomers(true);
+          customers = result.data || [];
+          customer = customers.find(c => String(c.id) === String(id));
+        }
+        
+        // ✅ 3) تحقق: هل لسه ده آخر عميل ضغط عليه المستخدم؟
+        if (editingCustomerId !== editToken) {
+          console.log('⚠️ تم إلغاء تعديل قديم');
+          return;
+        }
+        
+        if (!customer) {
+          toast('العميل غير موجود', 'error');
+          console.error('❌ ID غير موجود:', id, '| المتاح:', customers.map(c => c.id).slice(0, 5));
+          return;
+        }
+        
+        // ✅ 4) تحقق مزدوج من تطابق الـ ID
+        if (String(customer.id) !== String(id)) {
+          toast('خطأ في تطابق البيانات', 'error');
+          return;
+        }
+        
         await populateCitySelect(customer.area || '');
+        
+        // ✅ 5) تحقق مرة تانية بعد await
+        if (editingCustomerId !== editToken) return;
+        
         $('cust-id').value = id;
         $('cust-name').value = customer.name || '';
         $('cust-responsible').value = customer.responsible || '';
@@ -1354,9 +1390,14 @@
         $('cust-category').value = customer.category || '';
         $('cust-creditlimit').value = customer.creditLimit || 0;
         $('cust-notes').value = customer.notes || '';
-        $('cust-modal-title').textContent = 'تعديل بيانات العميل';
+        $('cust-modal-title').textContent = `تعديل: ${customer.name}`;
+        
+        console.log('✏️ تعديل العميل:', customer.id, customer.name);
         showModal('cust-modal');
-      } catch (e) { toast('فشل تحميل البيانات', 'error'); }
+      } catch (e) {
+        console.error(e);
+        toast('فشل تحميل البيانات', 'error');
+      }
     };
     window.saveCustomer = async () => {
       const id = $('cust-id').value;
