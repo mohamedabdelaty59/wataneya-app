@@ -221,6 +221,21 @@
     .inv-row-variance { background: #fef3c7 !important; }
     .inv-row-match { background: #d1fae5 !important; }
     .inv-row-shortage { background: #fee2e2 !important; }
+        /* 🧾 سند القبض */
+    .payment-receipt { max-width: 80mm; margin: 0 auto; padding: 4mm; background: white; color: black; font-family: var(--print-font); }
+    .payment-receipt .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 5px; }
+    .payment-receipt .header h2 { font-size: 15px; margin: 0 0 2px 0; }
+    .payment-receipt .header p { font-size: 10.5px; margin: 1px 0; line-height: 1.35; }
+    .payment-receipt .receipt-number { text-align: center; background: #f0f0f0; padding: 4px; margin: 5px 0; font-weight: bold; font-size: 11px; }
+    .payment-receipt .customer-info { border: 1px solid #000; padding: 5px; margin: 5px 0; font-size: 10.5px; line-height: 1.7; }
+    .payment-receipt .customer-info > div { margin: 1px 0; }
+    .payment-receipt .amount-box { border: 2px solid #000; padding: 8px; margin: 6px 0; text-align: center; background: #f9f9f9; }
+    .payment-receipt .amount-number { font-size: 18px; font-weight: bold; margin: 3px 0; }
+    .payment-receipt .amount-words { font-size: 10px; margin-top: 3px; line-height: 1.4; }
+    .payment-receipt .signature { display: flex; justify-content: space-between; margin-top: 15px; font-size: 10px; }
+    .payment-receipt .signature > div { text-align: center; flex: 1; }
+    .payment-receipt .signature .line { border-bottom: 1px solid #000; min-width: 60px; display: inline-block; margin-top: 20px; }
+    .payment-receipt .footer { text-align: center; margin-top: 12px; font-size: 9px; border-top: 1px dashed #000; padding-top: 5px; }
   </style>
 </head>
 <body>
@@ -449,7 +464,7 @@
         <div id="tab-payments" class="tab-content">
           <div class="page-header"><h2><i class="fas fa-hand-holding-usd"></i> التحصيلات</h2><button class="btn btn-primary" onclick="openAddPayment()"><i class="fas fa-plus"></i> سند قبض</button></div>
           <div class="search-bar"><input type="text" id="pay-search" placeholder="بحث..."><div class="filter-group"><label>من</label><input type="date" id="pay-filter-from"><label>إلى</label><input type="date" id="pay-filter-to"></div><button class="btn btn-ghost" onclick="applyPaymentFilters()"><i class="fas fa-filter"></i> فلترة</button><button class="btn btn-ghost" onclick="resetPaymentFilters()"><i class="fas fa-undo"></i> إعادة ضبط</button></div>
-          <div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>الرقم</th><th>التاريخ</th><th>العميل</th><th>المبلغ</th><th>طريقة الدفع</th><th>ملاحظات</th></tr></thead><tbody id="payments-table"></tbody></table></div></div>
+          <div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>الرقم</th><th>التاريخ</th><th>العميل</th><th>المبلغ</th><th>طريقة الدفع</th><th>ملاحظات</th><th>إجراءات</th></tr></thead><tbody id="payments-table"></tbody></table></div></div>
         </div>
 
         <!-- Returns -->
@@ -529,6 +544,22 @@
 
   <div class="modal-overlay" id="print-modal"><div class="modal modal-lg" style="max-width: 90mm;"><div class="modal-header"><h3><i class="fas fa-print"></i> معاينة الفاتورة</h3><button class="modal-close" onclick="hideModal('print-modal')">×</button></div><div class="modal-body" id="print-content" style="background:white;color:black;padding:5mm;"></div><div class="modal-footer"><button class="btn btn-primary" onclick="printInvoiceFromModal()"><i class="fas fa-print"></i> طباعة</button><button class="btn btn-gold" onclick="downloadInvoicePDF()"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn btn-ghost" onclick="hideModal('print-modal')">إلغاء</button></div></div></div>
 
+  <!-- 🧾 معاينة سند القبض -->
+  <div class="modal-overlay" id="payment-print-modal">
+    <div class="modal modal-lg" style="max-width: 95mm;">
+      <div class="modal-header">
+        <h3><i class="fas fa-print"></i> معاينة سند القبض</h3>
+        <button class="modal-close" onclick="hideModal('payment-print-modal')">×</button>
+      </div>
+      <div class="modal-body" id="payment-print-content" style="background:white;color:black;padding:5mm;"></div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="printPaymentReceipt()"><i class="fas fa-print"></i> طباعة</button>
+        <button class="btn btn-gold" onclick="downloadPaymentReceiptPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+        <button class="btn btn-ghost" onclick="hideModal('payment-print-modal')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+  
   <div class="modal-overlay" id="pay-modal"><div class="modal"><div class="modal-header"><h3><i class="fas fa-hand-holding-usd"></i> سند قبض</h3><button class="modal-close" onclick="hideModal('pay-modal')">×</button></div><div class="modal-body"><form id="pay-form"><div class="form-group"><label>العميل *</label><select id="pay-customer"></select></div><div class="form-row"><div class="form-group"><label>المبلغ (ج.م) *</label><input type="number" id="pay-amount" step="0.01"></div><div class="form-group"><label>التاريخ</label><input type="date" id="pay-date"></div></div><div class="form-group"><label>طريقة الدفع</label><select id="pay-method"><option value="نقدي">نقدي</option><option value="تحويل بنكي">تحويل بنكي</option><option value="شيك">شيك</option></select></div><div class="form-group"><label>ملاحظات</label><input id="pay-notes"></div></form></div><div class="modal-footer"><button class="btn btn-primary" id="pay-save-btn" onclick="savePayment()"><i class="fas fa-save"></i> حفظ</button><button class="btn btn-ghost" onclick="hideModal('pay-modal')">إلغاء</button></div></div></div>
 
   <div class="modal-overlay" id="ret-modal"><div class="modal"><div class="modal-header"><h3><i class="fas fa-undo-alt"></i> تسجيل مرتجع</h3><button class="modal-close" onclick="hideModal('ret-modal')">×</button></div><div class="modal-body"><form id="ret-form"><div class="form-row"><div class="form-group"><label>العميل *</label><select id="ret-customer"></select></div><div class="form-group"><label>رقم الفاتورة</label><input id="ret-invoice"></div></div><div class="form-group"><label>الصنف *</label><select id="ret-product"></select></div><div class="form-row"><div class="form-group"><label>الوزن (كجم) *</label><input type="number" id="ret-weight" step="0.5"></div><div class="form-group"></div></div><div class="form-row"><div class="form-group"><label>نوع المرتجع</label><select id="ret-type"><option value="good">صالح</option><option value="damaged">تالف</option></select></div><div class="form-group"><label>التاريخ</label><input type="date" id="ret-date"></div></div><div class="form-group"><label>ملاحظات</label><input id="ret-notes"></div></form></div><div class="modal-footer"><button class="btn btn-primary" id="ret-save-btn" onclick="saveReturn()"><i class="fas fa-save"></i> حفظ</button><button class="btn btn-ghost" onclick="hideModal('ret-modal')">إلغاء</button></div></div></div>
@@ -595,6 +626,8 @@
     let behaviorData = [];
     let currentInventory = {};
     const inFlightRequests = {};
+    let printPaymentData = null;
+    let cachedPaymentsList = [];
 
     // 💾 Cache
     function getCache(key) {
@@ -2046,9 +2079,22 @@
         if (search) { const f = search.toLowerCase(); payments = payments.filter(p => (p.customerName || '').toLowerCase().includes(f) || (p.number || '').toLowerCase().includes(f)); }
         if (from) payments = payments.filter(p => (p.date || '') >= from);
         if (to) payments = payments.filter(p => (p.date || '') <= to);
+
+        cachedPaymentsList = payments;
+
         let rows = '';
-        payments.forEach(p => { rows += `<tr><td>${p.number}</td><td>${safeDate(p.date)}</td><td>${p.customerName}</td><td>${fmt(p.amount)} ج.م</td><td>${p.method || '-'}</td><td>${p.notes || '-'}</td></tr>`; });
-        $('payments-table').innerHTML = rows || '<tr><td colspan="6" class="empty">لا توجد تحصيلات</td></tr>';
+        payments.forEach((p, idx) => {
+          rows += `<tr>
+            <td>${p.number}</td>
+            <td>${safeDate(p.date)}</td>
+            <td>${p.customerName}</td>
+            <td>${fmt(p.amount)} ج.م</td>
+            <td>${p.method || '-'}</td>
+            <td>${p.notes || '-'}</td>
+            <td><button class="btn btn-sm btn-primary" onclick="openPrintPaymentReceipt(${idx})" title="طباعة سند القبض"><i class="fas fa-print"></i></button></td>
+          </tr>`;
+        });
+        $('payments-table').innerHTML = rows || '<tr><td colspan="7" class="empty">لا توجد تحصيلات</td></tr>';
       } catch (e) { toast('فشل التحميل', 'error'); }
     }
     window.applyPaymentFilters = async function() {
@@ -2077,16 +2123,23 @@
       const date = $('pay-date').value;
       const notes = $('pay-notes').value;
       if (!customerId || !amount) { toast('أكمل البيانات', 'error'); return; }
+
       await withBtnLoading('pay-save-btn', async () => {
         try {
-          await callApi('addPayment', { customerId, customerName, amount, method, date, notes, createdBy: currentUser.id });
+          const result = await callApi('addPayment', { customerId, customerName, amount, method, date, notes, createdBy: currentUser.id });
           toast('✅ تم حفظ سند القبض');
           invalidatePaymentsCache(); invalidateCustomersCache();
-          hideModal('pay-modal'); await loadPayments();
+          hideModal('pay-modal');
+          await loadPayments();
+
+          const receiptData = (result && result.data) ? result.data : {
+            number: (result && result.number) || ('PAY-' + Date.now().toString().slice(-6)),
+            date, customerName, amount, method, notes
+          };
+          setTimeout(() => openPrintPaymentReceiptByData(receiptData), 350);
         } catch (e) { }
       });
     };
-
     // Returns
     async function loadReturns(search = '', from = '', to = '') {
       try {
@@ -2612,6 +2665,154 @@
       if (document.body.classList.contains('dark-mode')) { icon.className = 'fas fa-sun'; localStorage.setItem('theme', 'dark'); }
       else { icon.className = 'fas fa-moon'; localStorage.setItem('theme', 'light'); }
     }
+
+        // ========================================================================
+    // 🧾 سند القبض (Payment Receipt)
+    // ========================================================================
+
+    function numberToArabicWords(num) {
+      num = Math.floor(num);
+      if (num === 0) return 'صفر';
+      if (num < 0) return 'سالب ' + numberToArabicWords(-num);
+      const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة',
+                    'عشرة', 'أحد عشر', 'اثنا عشر', 'ثلاثة عشر', 'أربعة عشر', 'خمسة عشر',
+                    'ستة عشر', 'سبعة عشر', 'ثمانية عشر', 'تسعة عشر'];
+      const tens = ['', '', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+      const hundreds = ['', 'مئة', 'مئتان', 'ثلاثمئة', 'أربعمئة', 'خمسمئة', 'ستمئة', 'سبعمئة', 'ثمانمئة', 'تسعمئة'];
+
+      function convertUnder1000(n) {
+        const parts = [];
+        const h = Math.floor(n / 100);
+        const r = n % 100;
+        if (h > 0) parts.push(hundreds[h]);
+        if (r > 0) {
+          if (r < 20) parts.push(ones[r]);
+          else {
+            const t = Math.floor(r / 10), o = r % 10;
+            if (o > 0) parts.push(ones[o] + ' و' + tens[t]);
+            else parts.push(tens[t]);
+          }
+        }
+        return parts.join(' و');
+      }
+
+      const parts = [];
+      const millions = Math.floor(num / 1000000);
+      const thousands = Math.floor((num % 1000000) / 1000);
+      const rest = num % 1000;
+
+      if (millions > 0) {
+        if (millions === 1) parts.push('مليون');
+        else if (millions === 2) parts.push('مليونان');
+        else if (millions <= 10) parts.push(convertUnder1000(millions) + ' ملايين');
+        else parts.push(convertUnder1000(millions) + ' مليون');
+      }
+      if (thousands > 0) {
+        if (thousands === 1) parts.push('ألف');
+        else if (thousands === 2) parts.push('ألفان');
+        else if (thousands <= 10) parts.push(convertUnder1000(thousands) + ' آلاف');
+        else parts.push(convertUnder1000(thousands) + ' ألف');
+      }
+      if (rest > 0) parts.push(convertUnder1000(rest));
+
+      return parts.join(' و');
+    }
+
+    function generatePaymentReceiptHTML(payment) {
+      let customerPhone = '';
+      if (cachedCustomers && cachedCustomers.data) {
+        const cust = cachedCustomers.data.find(c => c.name === payment.customerName);
+        if (cust) customerPhone = cust.phone || '';
+      }
+
+      const amount = parseFloat(payment.amount) || 0;
+      const intPart = Math.floor(amount);
+      const decPart = Math.round((amount - intPart) * 100);
+      const words = numberToArabicWords(intPart);
+      const piastersText = decPart > 0 ? ` و${numberToArabicWords(decPart)} قرش` : '';
+
+      return `<div class="payment-receipt">
+        <div class="header">
+          <h2>🫒 وطنية فودز للصناعات الغذائية</h2>
+          <p>السجل الضريبي: ${formatTaxId('')}</p>
+          <p>📞 01151127150</p>
+        </div>
+        <div class="receipt-number">🧾 سند قبض رقم: ${payment.number || '-'}</div>
+        <div class="customer-info">
+          <div><strong>التاريخ:</strong> ${safeDate(payment.date)}</div>
+          <div><strong>العميل:</strong> ${payment.customerName || '-'}</div>
+          ${customerPhone ? `<div><strong>الهاتف:</strong> ${customerPhone}</div>` : ''}
+          <div><strong>طريقة الدفع:</strong> ${payment.method || 'نقدي'}</div>
+        </div>
+        <div class="amount-box">
+          <div style="font-size:10px;">المبلغ المدفوع</div>
+          <div class="amount-number">${fmt(amount)} ج.م</div>
+          <div class="amount-words">فقط: ${words}${piastersText} جنيه مصري لا غير</div>
+        </div>
+        ${payment.notes ? `<div style="font-size:10px;border:1px solid #000;padding:4px;margin:5px 0;"><strong>ملاحظات:</strong> ${payment.notes}</div>` : ''}
+        <div class="signature">
+          <div>توقيع العميل<div class="line"></div></div>
+          <div>توقيع المستلم<div class="line"></div></div>
+        </div>
+        <div class="footer">
+          شكراً لتعاملكم مع وطنية فودز<br>
+          هذا السند يُعد إثباتاً رسمياً للدفع
+        </div>
+      </div>`;
+    }
+
+    window.openPrintPaymentReceipt = function(index) {
+      const payment = cachedPaymentsList[index];
+      if (!payment) { toast('لم يتم العثور على السند', 'error'); return; }
+      openPrintPaymentReceiptByData(payment);
+    };
+
+    window.openPrintPaymentReceiptByData = function(payment) {
+      printPaymentData = payment;
+      $('payment-print-content').innerHTML = generatePaymentReceiptHTML(payment);
+      showModal('payment-print-modal');
+    };
+
+    window.printPaymentReceipt = function() {
+      const content = $('payment-print-content').innerHTML;
+      const win = window.open('', '_blank');
+      win.document.write(`<html dir="rtl"><head><title>سند قبض</title><style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Courier New',monospace;padding:5mm;background:white;color:black}
+        .payment-receipt{max-width:80mm;margin:0 auto;padding:4mm;background:white;color:black;font-family:'Courier New',monospace}
+        .header{text-align:center;border-bottom:2px dashed #000;padding-bottom:5px}
+        .header h2{font-size:15px;margin:0 0 2px 0}
+        .header p{font-size:10.5px;margin:1px 0;line-height:1.35}
+        .receipt-number{text-align:center;background:#f0f0f0;padding:4px;margin:5px 0;font-weight:bold;font-size:11px}
+        .customer-info{border:1px solid #000;padding:5px;margin:5px 0;font-size:10.5px;line-height:1.7}
+        .customer-info > div{margin:1px 0}
+        .amount-box{border:2px solid #000;padding:8px;margin:6px 0;text-align:center;background:#f9f9f9}
+        .amount-number{font-size:18px;font-weight:bold;margin:3px 0}
+        .amount-words{font-size:10px;margin-top:3px;line-height:1.4}
+        .footer{text-align:center;margin-top:12px;font-size:9px;border-top:1px dashed #000;padding-top:5px}
+        .signature{display:flex;justify-content:space-between;margin-top:15px;font-size:10px}
+        .signature > div{text-align:center;flex:1}
+        .signature .line{border-bottom:1px solid #000;min-width:60px;display:inline-block;margin-top:20px}
+        @page{size:A5;margin:5mm}
+      </style></head><body>${content}</body></html>`);
+      win.document.close();
+      setTimeout(() => { win.focus(); win.print(); }, 500);
+    };
+
+    window.downloadPaymentReceiptPDF = function() {
+      const element = document.getElementById('payment-print-content');
+      const opt = {
+        margin: [5, 5, 5, 5],
+        filename: `سند-قبض-${printPaymentData?.number || 'receipt'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a5', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save();
+    };
+    // ========================================================================
+    // 🧾 نهاية سند القبض
+    // ========================================================================
 
     // 🚀 Init
     document.addEventListener('DOMContentLoaded', function() {
